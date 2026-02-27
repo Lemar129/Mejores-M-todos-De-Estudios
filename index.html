@@ -132,7 +132,7 @@
         btn.onclick = () => {
             if (puntos >= m.costo) {
                 puntos -= m.costo;
-                m.costo *= 1.5;
+                m.costo *= 1.05;
                 if (m.tipo === "auto") cpsAuto += m.beneficio;
                 if (m.tipo === "multi_manual") clickManual *= m.beneficio;
                 actualizarAjustesVisuales();
