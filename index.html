@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Juego Clicker</title>
+</head>
+<body style="margin:0;">
+<script>
+{
+    // --- MOTOR DE MEMORIA (Resiste re-ejecuciones del código) ---
+    if (!window.cookieData) {
+        window.cookieData = {
+            puntos: 0, clickManual: 1, cpsAuto: 0, esOscuro: false,
+            estiloTienda: 'solido', contadorFluido: true, precios: null
+        };
+    }
+
+    function salvar() {
+        window.cookieData = {
+            puntos, clickManual, cpsAuto, esOscuro, estiloTienda,
+            contadorFluido, precios: mejoras.map(m => m.costo)
+        };
+    }
+
+    // --- REINICIO DE PANTALLA ---
+    document.body.textContent = ''; 
+    document.querySelectorAll('style').forEach(s => s.remove());
+
+    // --- VARIABLES (Cargando de la memoria de la ventana) ---
+    let { puntos, clickManual, cpsAuto, esOscuro, estiloTienda, contadorFluido } = window.cookieData;
+
+    const mejorasBase = [
+        { nombre: "Auto-Mini", costo: 10, beneficio: 1, tipo: "auto" },
+        { nombre: "Auto-Súper", costo: 100, beneficio: 5, tipo: "auto" },
+        { nombre: "Duplicador", costo: 1000, beneficio: 2, tipo: "multi_manual" },
+        { nombre: "Auto-Mega", costo: 10000, beneficio: 100, tipo: "auto" },
+        { nombre: "Auto-Ultra", costo: 100000, beneficio: 1000, tipo: "auto" },
+        { nombre: "Poder x5", costo: 250000, beneficio: 5, tipo: "multi_manual" },
+        { nombre: "Auto-Dios", costo: 500000, beneficio: 250000, tipo: "auto" },
+        { nombre: "Poder Divino", costo: 1000000, beneficio: 50, tipo: "multi_manual" },
+        { nombre: "Auto-Infinito", costo: 10000000, beneficio: 5000000, tipo: "auto" }
+    ];
+    let mejoras = JSON.parse(JSON.stringify(mejorasBase));
+    if (window.cookieData.precios) {
+        window.cookieData.precios.forEach((c, i) => { if(mejoras[i]) mejoras[i].costo = c; });
+    }
+
+    // --- ESTILOS ---
+    const style = document.createElement('style');
+    style.textContent = `
+        @import url('https://fonts.googleapis.com');
+        * { border: none; outline: none; font-family: 'Fredoka', sans-serif; transition: background 0.4s, transform 0.2s, color 0.4s; color: #FFFFFF; }
+        body { margin: 0; overflow-x: hidden; user-select: none; }
+        .seccion-titulo { font-size: 14px; text-transform: uppercase; opacity: 0.6; margin: 15px 0 5px 0; font-weight: 600; }
+        .btn-menu-ajuste { padding: 15px; margin: 5px 0; width: 100%; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 18px; border: 4px solid transparent !important; background: rgba(255,255,255,0.15); }
+        .btn-active { border: 4px solid #FFFFFF !important; background: rgba(255,255,255,0.3) !important; }
+        .btn-tienda { margin: 20px auto; padding: 25px; width: 480px; cursor: pointer; border-radius: 40px; font-weight: 600; font-size: 22px; box-shadow: 0 10px 0 rgba(0,0,0,0.1); display: block; opacity: 0; transform: translateY(20px); pointer-events: none; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .wobble-active { animation: wobble 0.1s ease-in-out; }
+        @keyframes wobble { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.9) rotate(5deg); } }
+    `;
+    document.head.appendChild(style);
+
+    const bg = document.createElement('div');
+    bg.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:#0055ff; background-image:linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size:60px 60px; text-align:center; overflow-y:auto;`;
+    document.body.appendChild(bg);
+
+    const bSet = document.createElement('button'); bSet.textContent = '⚙';
+    bSet.style.cssText = `position:fixed; top:20px; left:20px; background:none; cursor:pointer; font-size:45px; z-index:100; color: white;`;
+    bg.appendChild(bSet);
+
+    // --- MENÚ AJUSTES ---
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:250; display:none; justify-content:center; align-items:center; backdrop-filter:blur(15px);`;
+    const box = document.createElement('div');
+    box.style.cssText = `background:#0055ff; padding:40px; border-radius:50px; width:380px; text-align:center; box-shadow:0 40px 80px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center;`;
+    
+    box.innerHTML = `<h2 style="font-size:32px; margin-bottom:10px;">Ajustes</h2>`;
+    const crearSeccion = (txt) => { const s = document.createElement('div'); s.className = 'seccion-titulo'; s.textContent = txt; return s; };
+    const bL = document.createElement('button'); bL.className = 'btn-menu-ajuste'; bL.textContent = "Modo Claro";
+    const bD = document.createElement('button'); bD.className = 'btn-menu-ajuste'; bD.textContent = "Modo Oscuro";
+    const bT = document.createElement('button'); bT.className = 'btn-menu-ajuste'; bT.textContent = "Transparentes";
+    const bS = document.createElement('button'); bS.className = 'btn-menu-ajuste'; bS.textContent = "Sólidos";
+    const bF = document.createElement('button'); bF.className = 'btn-menu-ajuste'; bF.textContent = "Ritmo Fluido";
+    const bP = document.createElement('button'); bP.className = 'btn-menu-ajuste'; bP.textContent = "Por Pulsos";
+    
+    const bRes = document.createElement('button'); bRes.textContent = "↺ Reiniciar Todo";
+    bRes.className = 'btn-menu-ajuste'; bRes.style.background = "rgba(255,0,0,0.3)"; bRes.style.marginTop = "15px";
+
+    const bClose = document.createElement('button'); bClose.className = 'btn-menu-ajuste'; bClose.textContent = "Listo"; bClose.style.marginTop = "10px"; bClose.style.background = "rgba(255,255,255,0.4)";
+
+    box.append(crearSeccion("Apariencia"), bL, bD, crearSeccion("Tienda"), bT, bS, crearSeccion("Contador"), bF, bP, crearSeccion("Peligro"), bRes, bClose);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const pTxt = document.createElement('h1'); pTxt.style.cssText = 'font-size:100px; margin:80px 0 10px 0; font-weight:600;';
+    const sTxt = document.createElement('p'); sTxt.style.cssText = 'background:rgba(255,255,255,0.2); padding:15px 40px; border-radius:30px; font-weight:600; display:inline-block; font-size:22px;';
+    bg.append(pTxt, sTxt);
+
+    const galleta = document.createElement('div');
+    galleta.style.cssText = `width:180px; height:180px; background:#e2b07e; border-radius:50%; margin:40px auto; cursor:pointer; position:relative; box-shadow:0 15px 0 #c68e53;`;
+    const chip = (t, l, s) => {
+        const p = document.createElement('div'); p.style.cssText = `position:absolute; width:${s}px; height:${s}px; background:#3d2b1f; border-radius:50%; top:${t}%; left:${l}%;`; return p;
+    };
+    galleta.append(chip(20,30,20), chip(55,22,22), chip(65,55,18), chip(25,65,16), chip(75,40,16));
+    bg.appendChild(galleta);
+
+    const tienda = document.createElement('div');
+    tienda.style.paddingBottom = '100px';
+    bg.appendChild(tienda);
+
+    function renderTienda() {
+        mejoras.forEach((m, i) => {
+            const btn = tienda.querySelectorAll('.btn-tienda')[i];
+            if (estiloTienda === 'transparente') {
+                btn.style.background = 'rgba(255,255,255,0.15)';
+                btn.style.color = '#FFFFFF';
+            } else {
+                btn.style.background = esOscuro ? '#444444' : '#FFFFFF';
+                btn.style.color = esOscuro ? '#FFFFFF' : '#0055ff';
+            }
+            btn.textContent = `${m.nombre} (${m.tipo === "auto" ? "+" + m.beneficio.toLocaleString() : "x" + m.beneficio}) - Costo: ${Math.floor(m.costo).toLocaleString()}`;
+            btn.classList.toggle('btn-visible', puntos >= m.costo / 2);
+            btn.style.pointerEvents = puntos >= m.costo ? 'auto' : 'none';
+            btn.style.opacity = puntos >= m.costo ? '1' : '0.5';
+        });
+    }
+
+    mejoras.forEach((m) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-tienda';
+        btn.onclick = () => {
+            if (puntos >= m.costo) {
+                puntos -= m.costo;
+                m.costo *= 1.5;
+                if (m.tipo === "auto") cpsAuto += m.beneficio;
+                if (m.tipo === "multi_manual") clickManual *= m.beneficio;
+                actualizarAjustesVisuales();
+            }
+        };
+        tienda.appendChild(btn);
+    });
+
+    function actualizarAjustesVisuales() {
+        box.style.backgroundColor = esOscuro ? "#1a1a1a" : "#0055ff";
+        bg.style.backgroundColor = esOscuro ? "#1a1a1a" : "#0055ff";
+        bL.classList.toggle('btn-active', !esOscuro);
+        bD.classList.toggle('btn-active', esOscuro);
+        bT.classList.toggle('btn-active', estiloTienda === 'transparente');
+        bS.classList.toggle('btn-active', estiloTienda === 'solido');
+        bF.classList.toggle('btn-active', contadorFluido);
+        bP.classList.toggle('btn-active', !contadorFluido);
+        renderTienda();
+        salvar();
+    }
+
+    galleta.onclick = () => {
+        puntos += clickManual;
+        galleta.classList.remove('wobble-active');
+        void galleta.offsetWidth; 
+        galleta.classList.add('wobble-active');
+        actualizarAjustesVisuales();
+    };
+
+    setInterval(() => {
+        puntos += cpsAuto / 10;
+        pTxt.textContent = Math.floor(puntos).toLocaleString();
+        sTxt.textContent = `Puntos por segundo: ${cpsAuto.toLocaleString()}`;
+        renderTienda();
+    }, 100);
+
+    bSet.onclick = () => overlay.style.display = 'flex';
+    bClose.onclick = () => overlay.style.display = 'none';
+    bL.onclick = () => { esOscuro = false; actualizarAjustesVisuales(); };
+    bD.onclick = () => { esOscuro = true; actualizarAjustesVisuales(); };
+    bT.onclick = () => { estiloTienda = 'transparente'; actualizarAjustesVisuales(); };
+    bS.onclick = () => { estiloTienda = 'solido'; actualizarAjustesVisuales(); };
+    bF.onclick = () => { contadorFluido = true; actualizarAjustesVisuales(); };
+    bP.onclick = () => { contadorFluido = false; actualizarAjustesVisuales(); };
+    bRes.onclick = () => { if(confirm("¿Borrar todo el progreso?")) { localStorage.clear(); location.reload(); } };
+
+    actualizarAjustesVisuales();
+}
+</script>
+</body>
+</html>
