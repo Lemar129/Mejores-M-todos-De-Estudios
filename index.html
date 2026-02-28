@@ -37,8 +37,9 @@
         { nombre: "Auto-Ultra", costo: 100000, beneficio: 1000, tipo: "auto" },
         { nombre: "Poder x5", costo: 250000, beneficio: 5, tipo: "multi_manual" },
         { nombre: "Auto-Dios", costo: 500000, beneficio: 250000, tipo: "auto" },
-        { nombre: "Poder Divino", costo: 1000000, beneficio: 50, tipo: "multi_manual" },
-        { nombre: "Auto-Infinito", costo: 10000000, beneficio: 5000000, tipo: "auto" }
+        { nombre: "Poder Divino", costo: 10000000, beneficio: 10, tipo: "multi_manual" },
+        { nombre: "Auto-Infinito", costo: 100000000, beneficio: 50000000, tipo: "auto" }
+        { nombre: "Auto-Mortal", costo: 900000000, beneficio: 10000000, tipo: "auto" }
     ];
     let mejoras = JSON.parse(JSON.stringify(mejorasBase));
     if (window.cookieData.precios) {
@@ -132,7 +133,7 @@
         btn.onclick = () => {
             if (puntos >= m.costo) {
                 puntos -= m.costo;
-                m.costo *= 1.05;
+                m.costo *= 1.2;
                 if (m.tipo === "auto") cpsAuto += m.beneficio;
                 if (m.tipo === "multi_manual") clickManual *= m.beneficio;
                 actualizarAjustesVisuales();
